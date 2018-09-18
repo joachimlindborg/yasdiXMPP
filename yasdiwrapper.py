@@ -11,7 +11,7 @@ import ctypes,array         #ctypes laed die Libs in Python, array (BuildIn) fue
 class YasdiMaster:
     def __init__(self,
                  ini_file="./yasdi.ini",
-                 yasdiMaster_lib="yasdimaster.dll",
+                 yasdiMaster_lib="./libyasdimaster.so",
                  iDeviceHandleCount=50,
                  iChannelHandleCount=142,
                  DeviceNameBuffer=30,
@@ -22,16 +22,16 @@ class YasdiMaster:
                  status_text_buffer=30):
         """Konstruktor
                 Parameter:
-                ini_file = "./yasdi.ini"            |erwartet Pfad zur ini Datei (mit Schnittstelleninformationen etc.)
-                yasdiMaster_lib = "yasdimaster.dll" |erwartet Pfad zur yasdimaster Lib
-                iDeviceHandleCount = 50             |Anzahl der max. zu erfassenden Geraete
-                iChannelHandleCount = 142           |Anzahl der max. zu erfassenden Kanaele
-                DeviceNameBuffer = 30               |Anzahl der max. Namenslaenge eines Geraetes
-                DeviceTypeBuffer = 30               |Anzahl der max. Namenslaenge eines Geraetetypes
-                ValText = 15                        |Anzahl der max. Namenslaenge eines Textes der zu einem Kanal gehoert
-                ChannelName = 30                    |Anzahl der max. Namenslaenge eines Kanalnamens
-                cChanUnit = 10                      |Anzahl der max. Namenslaenge einer Kanaleinheit (z.B. kWp)
-                status_text_buffer = 30             |Anzahl der max. Nameslaenge eines Statustextes zu einem Kanal"""
+                ini_file = "yasdi.ini"                |erwartet Pfad zur ini Datei (mit Schnittstelleninformationen etc.)
+                yasdiMaster_lib = "libyasdimaster.so" |erwartet Pfad zur yasdimaster Lib
+                iDeviceHandleCount = 50               |Anzahl der max. zu erfassenden Geraete
+                iChannelHandleCount = 142             |Anzahl der max. zu erfassenden Kanaele
+                DeviceNameBuffer = 30                 |Anzahl der max. Namenslaenge eines Geraetes
+                DeviceTypeBuffer = 30                 |Anzahl der max. Namenslaenge eines Geraetetypes
+                ValText = 15                          |Anzahl der max. Namenslaenge eines Textes der zu einem Kanal gehoert
+                ChannelName = 30                      |Anzahl der max. Namenslaenge eines Kanalnamens
+                cChanUnit = 10                        |Anzahl der max. Namenslaenge einer Kanaleinheit (z.B. kWp)
+                status_text_buffer = 30               |Anzahl der max. Nameslaenge eines Statustextes zu einem Kanal"""
         self.ini_file = ini_file
         self.yasdiMaster_lib = yasdiMaster_lib
         self.DriverCount = ctypes.c_ulong()
@@ -65,19 +65,19 @@ class YasdiMaster:
 
     def yasdiMasterInitialize(self):
         """Initialisiert die yasdiMaster Lib, diese Mathode muss zuerst aufgerufen werden."""
-        self.yasdiMaster._yasdiMasterInitialize(self.ini_file,self.pDriverCount)
+        self.yasdiMaster.yasdiMasterInitialize(self.ini_file,self.pDriverCount)
 
     def yasdiMasterShutdown(self):
         """Beendet die yasdiMaster Lib, diese Methode gibt alle Resourcen wieder frei."""
-        self.yasdiMaster._yasdiMasterShutdown()
+        self.yasdiMaster.yasdiMasterShutdown()
 
     def yasdiReset(self):
         """Setzt die yasdiMaster Lib wiedr in den Ursprungszustend... wie nach yasdiMasterInitialize"""
-        self.yasdiMaster._yasdiReset()
+        self.yasdiMaster.yasdiReset()
 
     def GetDeviceHandles(self):
         """Gibt alle GeraeteHandles zurueck (typ: Liste)"""
-        self.yasdiMaster._GetDeviceHandles(self.DeviceHandles.buffer_info()[0],
+        self.yasdiMaster.GetDeviceHandles(self.DeviceHandles.buffer_info()[0],
                                            self.iDeviceHandleCount)
         return self.DeviceHandles.tolist()
 
@@ -85,7 +85,7 @@ class YasdiMaster:
         """Gibt zu dem GeraeteHandle den Geraetenamen als String zurueck
                 Parameter:
                 handle = Geraetehandle"""
-        self.yasdiMaster._GetDeviceName(handle,self.DeviceNameBuffer,len(self.DeviceNameBuffer))
+        self.yasdiMaster.GetDeviceName(handle,self.DeviceNameBuffer,len(self.DeviceNameBuffer))
 
         return self.DeviceNameBuffer.replace("\x00","").rstrip()
 
@@ -93,14 +93,14 @@ class YasdiMaster:
         """Gibt zu dem GeraeteHandle die Seriennummer zurueck, fuehrende Nullen werden entfernt da das Ergebnis numerisch ist
                 Parameter:
                 handle = Geraetehandle"""
-        self.yasdiMaster._GetDeviceSN(handle,self.pSNBuffer)
+        self.yasdiMaster.GetDeviceSN(handle,self.pSNBuffer)
         return int(self.SNBuffer.value)
 
     def GetDeviceType(self,handle):
         """Gibt zu dem GeraeteHandle den Typ (z.B. SunBC-38) zrueck
                 Parameter:
                 handle = Geraetehandle"""
-        result = self.yasdiMaster._GetDeviceType(handle,self.DeviceTypeBuffer,len(self.DeviceTypeBuffer))
+        result = self.yasdiMaster.GetDeviceType(handle,self.DeviceTypeBuffer,len(self.DeviceTypeBuffer))
         if result == -1:
             return result
         else:
@@ -118,7 +118,7 @@ class YasdiMaster:
             return -1
 
         bChanIndex = ctypes.c_byte(0)
-        self.yasdiMaster._GetChannelHandles(handle,
+        self.yasdiMaster.GetChannelHandles(handle,
                                             self.ChannelHandles.buffer_info()[0],
                                             self.iChannelHandleCount,
                                             wChanType,
@@ -130,7 +130,7 @@ class YasdiMaster:
         """Gibt zu einen Kanalnamen den Wert und das Handle zurueck
                 Parameter:
                 name = Kanalnamen"""
-        channel_value = self.yasdiMaster._FindChannelName(self.pdDevHandle,name)
+        channel_value = self.yasdiMaster.FindChannelName(self.pdDevHandle,name)
         if channel_value == 0:
             return channel_value
         else:
@@ -140,7 +140,7 @@ class YasdiMaster:
         """Gibt den ChannelNamen zurueck. -1 bei Misserfolg
                 Parameter:
                 handle = erwartet den entsprechenden Handle des Channels"""
-        result = self.yasdiMaster._GetChannelName(handle,self.ChannelName,len(self.ChannelName))
+        result = self.yasdiMaster.GetChannelName(handle,self.ChannelName,len(self.ChannelName))
         if result == -1:
             return result
         else:
@@ -159,7 +159,7 @@ class YasdiMaster:
                 -2: YASDI Status ShutDown
                 -3: Timeout
                 -4: Unbekannter Fehler; Kanalwert ungueltig"""
-        result = self.yasdiMaster._GetChannelValue(channel_handle,
+        result = self.yasdiMaster.GetChannelValue(channel_handle,
                                                    device_handle,
                                                    self.pdblValue,
                                                    self.ValText,
@@ -175,14 +175,14 @@ class YasdiMaster:
         """Sekunden der Epoche, wenn Rueckgabe Null dann ist das Handle ungueltig
                 Parameter:
                 handle = Kanalhandle"""
-        timestamp = self.yasdiMaster._GetChannelValueTimeStamp(handle)
+        timestamp = self.yasdiMaster.GetChannelValueTimeStamp(handle)
         return timestamp
 
     def GetChannelUnit(self,handle):
         """Gibt die Einheit eines Kanals zurueck. z.B. [Pac]=kW
                 Parameter:
                 handle = Kanalhandle"""
-        self.yasdiMaster._GetChannelUnit(handle,self.cChanUnit,len(self.cChanUnit))
+        self.yasdiMaster.GetChannelUnit(handle,self.cChanUnit,len(self.cChanUnit))
         return self.cChanUnit.replace("\x00","").rstrip().lstrip()
 
     def GetMasterStateIndex(self):
@@ -194,18 +194,18 @@ class YasdiMaster:
                 5 = Master-Kommando bearbeitung
                 6 = Kanaele lesen (Spot oder Parameter)
                 7 = Kanaele schreiben (nur Parameter)"""
-        result = self.yasdiMaster._GetMasterStateIndex()
+        result = self.yasdiMaster.GetMasterStateIndex()
         return result
 
     def SetChannelValue(self,channel_handle,device_handle,value):
-        result = self.yasdiMaster._SetChannelValue(channel_handle,device_handle,value)
+        result = self.yasdiMaster.SetChannelValue(channel_handle,device_handle,value)
         return result
     
     def GetChannelStatTextCnt(self,handle):
         """Gibt die Anzahl der Statustechte des Kanals zurueck
                 Parameter:
                 handle = Kanalhandle"""
-        result = self.yasdiMaster._GetChannelStatTextCnt(handle)
+        result = self.yasdiMaster.GetChannelStatTextCnt(handle)
         return result
 
     def GetChannelStatText(self,handle,index,):
@@ -213,7 +213,7 @@ class YasdiMaster:
                 Parameter:
                 handle = Kanalhandle
                 index = Index des Statustextes, beginnend bei 0"""
-        result = self.yasdiMaster._GetChannelStatText(handle,index,self.status_text_buffer,len(self.status_text_buffer))
+        result = self.yasdiMaster.GetChannelStatText(handle,index,self.status_text_buffer,len(self.status_text_buffer))
         if not result:
             return self.status_text_buffer.replace("\x00","").rstrip().lstrip()
         else:
@@ -222,7 +222,7 @@ class YasdiMaster:
     def GetChannelMask(self,handle):
         """Gibt die ChannelMast zurueck, d.h. ob die Kanaele Spot oder Parameterkanaele sind
                 Parameter: Kanalhandle"""
-        result = self.yasdiMaster._GetChannelMask(handle,self.pChanType,self.pChanIndex)
+        result = self.yasdiMaster.GetChannelMask(handle,self.pChanType,self.pChanIndex)
         return (self.ChanType.value,self.ChanIndex.value)
         
 
@@ -236,7 +236,7 @@ class YasdiMaster:
                 Ergebnis:
                 0 = OK
                 -1 = es wurden nicht alle Geraete erreicht"""
-        result = self.yasdiMaster._yasdiDoMasterCmdEx(cmd,device_handle_count,param1,param2)
+        result = self.yasdiMaster.yasdiDoMasterCmdEx(cmd,device_handle_count,param1,param2)
         return result
 
     def GetChannelValRange(self,handle):
@@ -249,7 +249,7 @@ class YasdiMaster:
                 -2: Zeiger fuer Ergebnis ungueltig (sollte durch den yasdiwrapper nicht vorkommen)
                 -3: wenn es keinen extra Wertebereich gibt
                 """
-        result = self.yasdiMaster._GetChannelValRange(handle,self.prange_min,self.prange_max)
+        result = self.yasdiMaster.GetChannelValRange(handle,self.prange_min,self.prange_max)
         if not result:
             return (self.range_min.value,self.range_max.value)
         else:
@@ -257,10 +257,10 @@ class YasdiMaster:
 
 class Yasdi:
     """YASDI Wrapper fuer Python"""
-    def __init__(self,yasdi_lib="yasdi.dll",maxDriverIDs=10,DriverNameBuffer=30):
+    def __init__(self,yasdi_lib="./libyasdi.so",maxDriverIDs=10,DriverNameBuffer=30):
         """Konstruktor
                 Parameter:
-                yasdi_lib = "yasdi.dll"         |erwartet Pfad zur yasdi Lib
+                yasdi_lib = "libyasdi.so"       |erwartet Pfad zur yasdi Lib
                 maxDriverIDs = 10               |Anzahl der max. moegleichen Schnittstellen
                 DriverNameBuffer = 30           |Anzahl der max.Namenslaenge des Schnittstellennamens"""
         self.maxDriverIDs = maxDriverIDs
@@ -271,14 +271,14 @@ class Yasdi:
 
     def yasdiGetDriver(self):
         """Gibt die Anzahl zur verfuegung stehender Schnittstellen zurueck"""
-        result = self.yasdi._yasdiGetDriver(self.DriverIDArray.buffer_info()[0],self.maxDriverIDs)
+        result = self.yasdi.yasdiGetDriver(self.DriverIDArray.buffer_info()[0],self.maxDriverIDs)
         return result
 
     def yasdiGetDriverName(self,driverID):
         """Gibt den Namen eine Schnittstelle zurueck, zum Beispiel: COM1 oder /drv/ttyS0 etc.
                 Parameter:
                 driverID = erwartet Schnittstellnummer (z.B. 0)"""
-        self.yasdi._yasdiGetDriverName(driverID,self.DriverNameBuffer,len(self.DriverNameBuffer))
+        self.yasdi.yasdiGetDriverName(driverID,self.DriverNameBuffer,len(self.DriverNameBuffer))
         return self.DriverNameBuffer.replace("\x00","").rstrip().lstrip()
 
     def yasdiSetDriverOnline(self,driverID):
@@ -288,14 +288,14 @@ class Yasdi:
                 Rueckgabe:
                 0: bei Erfolg
                 1: bei Fehler"""
-        result = self.yasdi._yasdiSetDriverOnline(driverID)
+        result = self.yasdi.yasdiSetDriverOnline(driverID)
         return result
 
     def yasdiSetDriverOffline(self,driverID):
         """Gibt die Schnittstelle wieder Frei
                 Parameter:
                 driverID = erwartet Schnittstellnummer (z.B. 0)"""
-        self.yasdi._yasdiSetDriverOffline(driverID)
+        self.yasdi.yasdiSetDriverOffline(driverID)
 
 if __name__ == "__main__":
     print about
